@@ -27,6 +27,8 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <termios.h>
+#include <dirent.h>
+#include <string.h>
 
 #include "osapi.h"
 
@@ -34,6 +36,40 @@ struct osapi_linux_data {
 	int fd;
 	struct termios oldtio;
 };
+
+/* non-reentrant! */
+static const char *_enumerate_remote(void)
+{
+	static DIR *dir = NULL;
+	struct dirent *dirent;
+	static char buf[NAME_MAX + 1];
+
+	if (dir == NULL) {
+		dir = opendir("/dev");
+		assert(dir);
+	}
+
+	while ((dirent = readdir(dir)))
+	{
+		if (!strncmp(dirent->d_name, "ttyS", 4)) {
+			break;
+		}
+		if (!strncmp(dirent->d_name, "ttyUSB", 6)) {
+			break;
+		}
+	}
+
+	if (dirent == NULL) {
+		closedir(dir);
+		dir = NULL;
+		return NULL;
+	}
+
+	strcpy(buf, "/dev/");
+	strcpy(buf + 5, dirent->d_name);
+
+	return buf;
+}
 
 static void *_open_remote(const char *devname, int flags)
 {
@@ -136,7 +172,8 @@ static ssize_t _write_remote(void *handle, void *buf, size_t count)
 	return write(d->fd, buf, count);
 }
 
-struct jp2_remote_ops linux_ops = {
+static struct osapi_ops linux_ops = {
+	.enumerate = _enumerate_remote,
 	.open = _open_remote,
 	.close = _close_remote,
 	.flush = _flush_remote,
@@ -145,7 +182,4 @@ struct jp2_remote_ops linux_ops = {
 	.write = _write_remote,
 };
 
-void osapi_init()
-{
-	jp2_set_default_remote_ops(&linux_ops);
-}
+struct osapi_ops *osapi = &linux_ops;

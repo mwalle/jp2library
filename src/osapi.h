@@ -22,7 +22,8 @@
 
 #include <unistd.h>
 
-struct jp2_remote_ops {
+struct osapi_ops {
+	const char *(*enumerate)(void);
 	void *(*open)(const char *devname, int flags);
 	void (*close)(void *handle);
 	int (*reset)(void *handle, bool assert_pin);
@@ -31,7 +32,6 @@ struct jp2_remote_ops {
 	ssize_t (*write)(void *handle, void *buf, size_t count);
 };
 
-void osapi_init(void);
-void jp2_set_default_remote_ops(struct jp2_remote_ops *ops);
+extern struct osapi_ops *osapi;
 
 #endif /* __OSAPI_H */

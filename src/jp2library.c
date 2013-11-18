@@ -31,7 +31,6 @@
 
 struct jp2_remote {
 	void *handle; /* opaque to this library */
-	struct jp2_remote_ops *ops;
 	uint8_t txbuf[2048];
 	uint8_t rxbuf[2048];
 	int addr_width;
@@ -71,8 +70,6 @@ static int debug(int lvl, const char *fmt, ...)
 
 	return rc;
 }
-
-static struct jp2_remote_ops *default_remote_ops = NULL;
 
 /*
  * Helper functions
@@ -140,12 +137,12 @@ static void jp2_reset(struct jp2_remote *r)
 
 	debug(1, "%s: pulsing RTS#\n", __func__);
 
-	rc = r->ops->reset(r->handle, true);
+	rc = osapi->reset(r->handle, true);
 	assert(!rc);
 
 	usleep(135000);
 
-	rc = r->ops->reset(r->handle, false);
+	rc = osapi->reset(r->handle, false);
 	assert(!rc);
 }
 
@@ -165,7 +162,7 @@ static int jp2_send(struct jp2_remote *r, uint8_t *data, int len)
 
 	debug(1, "%s: %s\n", __func__, hexdump(r->txbuf, len + 3));
 
-	rc = r->ops->write(r->handle, r->txbuf, len + 3);
+	rc = osapi->write(r->handle, r->txbuf, len + 3);
 	if (rc != len + 3) {
 		return -1;
 	}
@@ -180,7 +177,7 @@ static int jp2_receive(struct jp2_remote *r, uint8_t **data)
 	uint8_t csum;
 
 	/* first read the length */
-	rc = r->ops->read(r->handle, r->rxbuf, 2);
+	rc = osapi->read(r->handle, r->rxbuf, 2);
 	if (rc < 0) {
 		debug(1, "%s: read() returned error %d\n", __func__, rc);
 		return -1;
@@ -194,7 +191,7 @@ static int jp2_receive(struct jp2_remote *r, uint8_t **data)
 	assert(len >= 2);
 
 	/* read remaining bytes */
-	rc = r->ops->read(r->handle, r->rxbuf + 2, len);
+	rc = osapi->read(r->handle, r->rxbuf + 2, len);
 	if (rc < 0) {
 		debug(1, "%s: read() returned error %d\n", __func__, rc);
 		return -1;
@@ -478,7 +475,7 @@ int jp2_enter_loader(struct jp2_remote *r)
 	usleep(150000);
 
 	/* flush any spurious characters in the input buffer */
-	r->ops->flush(r->handle);
+	osapi->flush(r->handle);
 
 	return jp2_simple_command(r, JP2_CMD_ENTER_LOADER);
 }
@@ -497,8 +494,7 @@ struct jp2_remote *jp2_open_remote(const char *devname)
 
 	memset(r, 0, sizeof(*r));
 
-	r->ops = default_remote_ops;
-	r->handle = r->ops->open(devname, 0);
+	r->handle = osapi->open(devname, 0);
 	if (r->handle == NULL) {
 		free(r);
 		return NULL;
@@ -509,14 +505,8 @@ struct jp2_remote *jp2_open_remote(const char *devname)
 
 void jp2_close_remote(struct jp2_remote *r)
 {
-	r->ops->close(r->handle);
+	osapi->close(r->handle);
 	free(r);
-}
-
-void jp2_set_default_remote_ops(struct jp2_remote_ops *ops)
-{
-	assert(ops);
-	default_remote_ops = ops;
 }
 
 int jp2_init(void)
@@ -524,8 +514,6 @@ int jp2_init(void)
 	if (getenv("JP2_DEBUG")) {
 		debug_level = 1;
 	}
-	osapi_init();
-	assert(default_remote_ops);
 
 	return 0;
 }

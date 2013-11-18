@@ -81,7 +81,7 @@ static ssize_t _write_remote(void *handle, void *buf, size_t count)
 	return count;
 }
 
-struct jp2_remote_ops test_ops = {
+struct osapi_ops test_ops = {
 	.open = _open_remote,
 	.close = _close_remote,
 	.reset = _reset_remote,
@@ -100,7 +100,7 @@ void test_clear_buffers()
 
 void test_init()
 {
-	jp2_set_default_remote_ops(&test_ops);
+	osapi = &test_ops;
 
 	_ut_rxbuf = malloc(2048);
 	_ut_txbuf = malloc(2048);
