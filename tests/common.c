@@ -53,6 +53,12 @@ static int _reset_remote(void *handle, bool assert_pin)
 	return 0;
 }
 
+static int _flush_remote(void *handle)
+{
+	assert(handle == &dummy_handle);
+	return 0;
+}
+
 static ssize_t _read_remote(void *handle, void *buf, size_t count)
 {
 	assert(handle == &dummy_handle);
@@ -79,6 +85,7 @@ struct jp2_remote_ops test_ops = {
 	.open = _open_remote,
 	.close = _close_remote,
 	.reset = _reset_remote,
+	.flush = _flush_remote,
 	.read = _read_remote,
 	.write = _write_remote,
 };
@@ -111,4 +118,9 @@ void test_tx(uint8_t *data, int len)
 {
 	memcpy(_ut_rxptr_p, data, len);
 	_ut_rxptr_p += len;
+}
+
+void test_tx_s(const char *data, int len)
+{
+	test_tx((uint8_t*)data, len);
 }

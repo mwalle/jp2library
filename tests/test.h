@@ -50,7 +50,9 @@ extern jmp_buf t_env;
 extern int t_tests_run;
 
 void test_init(void);
+void test_clear_buffers();
 void test_tx(uint8_t *data, int len);
+void test_tx_s(const char *data, int len);
 uint8_t *test_rx(int len);
 
 #endif /* __TEST_H */
