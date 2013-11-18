@@ -31,6 +31,28 @@ void usage(const char *prog)
 	printf("usage: %s <command> [<args>..]\n", prog);
 }
 
+static int cmd_info(int argc, char **argv)
+{
+	int rc;
+	struct jp2_info info;
+
+	rc = jp2_get_info(r, &info);
+	if (rc < 0) {
+		printf("GET_INFO command failed\n");
+		return rc;
+	}
+
+	printf("Found remote: %s\n", info.signature);
+	printf("Program area: %05x - %05x\n",
+			info.program_area_begin, info.program_area_end);
+	printf("Protocol area: %05x - %05x\n",
+			info.protocol_area_begin, info.protocol_area_end);
+	printf("Update area: %05x - %05x\n",
+			info.update_area_begin, info.update_area_end);
+
+	return 0;
+}
+
 static int cmd_raw(int argc, char **argv)
 {
 	uint8_t cmd[16];
@@ -62,7 +84,9 @@ int main(int argc, char **argv)
 		return -1;
 	}
 
-	if (!strcmp(argv[1], "raw")) {
+	if (!strcmp(argv[1], "info")) {
+		rc = cmd_info(argc, argv);
+	} else if (!strcmp(argv[1], "raw")) {
 		rc = cmd_raw(argc, argv);
 	}
 
