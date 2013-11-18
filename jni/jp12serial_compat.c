@@ -25,6 +25,7 @@
 #include <jni.h>
 
 #include "jp2library.h"
+#include "osapi.h"
 #include "jp12serial_compat.h"
 
 /* Unfortunately, there is no jni handle attribute in the io.JP12Serial class.
@@ -69,16 +70,28 @@ JP12FUNC_3(getJP2info, jboolean, jobject obj, jbyteArray buffer, jint length)
 
 JP12FUNC_1(getPortNames, jobjectArray, jobject obj)
 {
-	jobjectArray names;
-
-
-	names = (*env)->NewObjectArray(env, 1,
-			(*env)->FindClass(env, "java/lang/String"),
-			(*env)->NewStringUTF(env, "/dev/ttyUSB0"));
+	jobjectArray array;
+	const char *name;
+	int port = 0;
+	jstring portnames[32];
 
 	jp2_initialize();
 
-	return names;
+	while ((name = osapi->enumerate()) && port < 32) {
+		portnames[port++] = (*env)->NewStringUTF(env, name);
+	}
+
+	array = (*env)->NewObjectArray(env, port,
+			(*env)->FindClass(env, "java/lang/String"),
+			NULL);
+
+	while (port--)
+	{
+		(*env)->SetObjectArrayElement(env, array, port,
+				portnames[port]);
+	}
+
+	return array;
 }
 
 JP12FUNC_2(openRemote, jstring, jobject obj, jstring jportname)
@@ -89,7 +102,7 @@ JP12FUNC_2(openRemote, jstring, jobject obj, jstring jportname)
 	jp2_initialize();
 
 	if (jportname == NULL) {
-		/* XXX: automatically try other ports */
+		/* XXX: auto-detect not supported yet */
 		return NULL;
 	}
 
