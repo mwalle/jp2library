@@ -282,8 +282,8 @@ int jp2_read_block(struct jp2_remote *r, uint32_t address, uint16_t len,
 
 		memcpy(data, _data, rxlen);
 
-		data += bytes_read;
-		address += bytes_read;
+		data += rxlen;
+		address += rxlen;
 		bytes_read += rxlen;
 	}
 
