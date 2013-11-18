@@ -332,7 +332,6 @@ int jp2_write_block(struct jp2_remote *r, uint32_t address, uint16_t len,
 		if (rc < 0) {
 			return rc;
 		}
-		assert(rc == txlen);
 
 		address += txlen;
 		data += txlen;
