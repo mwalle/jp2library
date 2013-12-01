@@ -48,8 +48,8 @@ void usage()
 		"\terase <start> <length>\n"
 		"\t        Erase the given area. Please not that only whole\n"
 		"\t        erase blocks can be erased.\n"
-		"\twrite <infile> <start> <length>\n"
-		"\t        Write <length> bytes from remote to offset <start>.\n"
+		"\twrite <infile> <address>\n"
+		"\t        Write to offset <address>.\n"
 		"\traw [bytes..]\n"
 		"\t        Send an raw command to the remote.\n"
 		, prog);
@@ -114,7 +114,7 @@ static int cmd_read(int argc, char **argv)
 		printf("Reading %05Xh\n", address);
 		rc = jp2_read_block(r, address, sizeof(buf), buf);
 		if (rc < 0) {
-			printf("could not read from remote\n");
+			printf("could not read from remote (%d)\n", rc);
 			break;
 		}
 
@@ -135,11 +135,78 @@ static int cmd_read(int argc, char **argv)
 
 static int cmd_erase(int argc, char **argv)
 {
+	int rc;
+	int address;
+	int length;
+	char *endptr;
+
+	if (argc != 3) {
+		usage();
+		return EXIT_FAILURE;
+	}
+
+	address = strtoul(argv[1], &endptr, 0);
+	if (*argv[1] != '\0' && *endptr != '\0') {
+		printf("could not parse start address\n");
+		return -1;
+	}
+
+	length = strtoul(argv[2], &endptr, 0);
+	if (*argv[2] != '\0' && *endptr != '\0') {
+		printf("could not parse length\n");
+		return -1;
+	}
+
+	rc = jp2_erase_block(r, address, address + length);
+	if (rc < 0) {
+		printf("could not erase block (%d)\n", rc);
+		return -1;
+	}
+
 	return 0;
 }
 
 static int cmd_write(int argc, char **argv)
 {
+	int rc;
+	int address;
+	char *endptr;
+	FILE *f;
+
+	if (argc != 3) {
+		usage();
+		return EXIT_FAILURE;
+	}
+
+	address = strtoul(argv[2], &endptr, 0);
+	if (*argv[2] != '\0' && *endptr != '\0') {
+		printf("could not parse address\n");
+		return -1;
+	}
+
+	f = fopen(argv[1], "rb");
+	if (!f) {
+		printf("could not open %s: %s", argv[1], strerror(errno));
+		return -1;
+	}
+
+	while (!feof(f)) {
+		uint8_t buf[128];
+		rc = fread(buf, 1, sizeof(buf), f);
+		if (rc < 0) {
+			printf("could not read from file: %s\n", strerror(errno));
+			return -1;
+		}
+
+		rc = jp2_write_block(r, address, rc, buf);
+		if (rc < 0) {
+			printf("could not write to the remote (%d)\n", rc);
+			return -1;
+		}
+
+		address += rc;
+	}
+
 	return 0;
 }
 
@@ -163,10 +230,12 @@ int main(int argc, char **argv)
 	int opt;
 	struct jp2_info info;
 	const char *dev = "/dev/ttyUSB0";
+	bool o_noenter = false;
+	bool o_noleave = false;
 
 	prog = argv[0];
 
-	while ((opt = getopt(argc, argv, "D:hv")) != -1) {
+	while ((opt = getopt(argc, argv, "D:hvLE")) != -1) {
 		switch (opt) {
 		case 'D':
 			dev = optarg;
@@ -176,6 +245,12 @@ int main(int argc, char **argv)
 			exit(EXIT_SUCCESS);
 		case 'v':
 			setenv("JP2_DEBUG", "1", 1);
+			break;
+		case 'E':
+			o_noenter = true;
+			break;
+		case 'L':
+			o_noleave = true;
 			break;
 		default:
 			usage();
@@ -191,7 +266,9 @@ int main(int argc, char **argv)
 	jp2_init();
 	r = jp2_open_remote(dev);
 
-	jp2_enter_loader(r, true);
+	if (!o_noenter) {
+		jp2_enter_loader(r, true);
+	}
 
 	jp2_get_info(r, &info);
 
@@ -207,7 +284,9 @@ int main(int argc, char **argv)
 		rc = cmd_raw(argc - optind, argv + optind);
 	}
 
-	jp2_exit_loader(r);
+	if (!o_noleave) {
+		jp2_exit_loader(r);
+	}
 
 	return rc;
 }
