@@ -110,7 +110,7 @@ JP12FUNC_2(openRemote, jstring, jobject obj, jstring jportname)
 	r = jp2_open_remote(portname);
 	(*env)->ReleaseStringUTFChars(env, jportname, portname);
 
-	rc = jp2_enter_loader(r);
+	rc = jp2_enter_loader(r, false);
 	if (rc) {
 		jp2_close_remote(r);
 		return NULL;

@@ -145,7 +145,7 @@ static void jp2_reset(struct jp2_remote *r)
 	assert(!rc);
 }
 
-static int jp2_send(struct jp2_remote *r, uint8_t *data, int len)
+static int jp2_send(struct jp2_remote *r, const uint8_t *data, int len)
 {
 	int rc;
 
@@ -219,7 +219,7 @@ static int jp2_receive(struct jp2_remote *r, uint8_t **data)
 	return len - 2;
 }
 
-int jp2_command(struct jp2_remote *r, uint8_t *txdata, int txlen,
+int jp2_command(struct jp2_remote *r, const uint8_t *txdata, int txlen,
 	uint8_t **rxdata)
 {
 	int rc;
@@ -232,7 +232,7 @@ int jp2_command(struct jp2_remote *r, uint8_t *txdata, int txlen,
 	return jp2_receive(r, rxdata);
 }
 
-int jp2_simple_command(struct jp2_remote *r, uint8_t cmd)
+int jp2_simple_command(struct jp2_remote *r, const uint8_t cmd)
 {
 	return jp2_command(r, &cmd, 1, NULL);
 }
@@ -465,8 +465,14 @@ int jp2_get_info(struct jp2_remote *r, struct jp2_info *info)
 	return 0;
 }
 
-int jp2_enter_loader(struct jp2_remote *r)
+int jp2_enter_loader(struct jp2_remote *r, bool extended_mode)
 {
+	/* this is some kind of key, which you can find if you
+	 * disassemble the bootloader of your remote */
+	static const uint8_t cmd[] = {
+		JP2_CMD_ENTER_LOADER, 0x55, 0xaa
+	};
+
 	jp2_reset(r);
 
 	/* we need to wait until the processor starts up */
@@ -475,7 +481,7 @@ int jp2_enter_loader(struct jp2_remote *r)
 	/* flush any spurious characters in the input buffer */
 	osapi->flush(r->handle);
 
-	return jp2_simple_command(r, JP2_CMD_ENTER_LOADER);
+	return jp2_command(r, cmd, (extended_mode) ? 3 : 1, NULL);
 }
 
 int jp2_exit_loader(struct jp2_remote *r)

@@ -124,7 +124,7 @@ void test_connect_16bit(void)
 	/* ack to exit bootloader */
 	test_tx_s("\x00\x02\x00\x02", 4);
 
-	rc = jp2_enter_loader(r);
+	rc = jp2_enter_loader(r, false);
 	t_assert(rc == -JP2_ERR_NO_ERR);
 	rx = test_rx(4);
 	t_assert(!memcmp(rx, "\x00\x02\x51\x53", 4));
@@ -176,7 +176,7 @@ void test_connect_32bit(void)
 	/* ack to exit bootloader */
 	test_tx_s("\x00\x02\x00\x02", 4);
 
-	rc = jp2_enter_loader(r);
+	rc = jp2_enter_loader(r, false);
 	t_assert(rc == -JP2_ERR_NO_ERR);
 	rx = test_rx(4);
 	t_assert(!memcmp(rx, "\x00\x02\x51\x53", 4));

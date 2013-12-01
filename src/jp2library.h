@@ -21,6 +21,7 @@
 #define __JP2LIBRARY_H
 
 #include <stdint.h>
+#include <stdbool.h>
 
 struct jp2_remote;
 
@@ -63,8 +64,8 @@ int jp2_init(void);
 struct jp2_remote *jp2_open_remote(const char *devname);
 void jp2_close_remote(struct jp2_remote *r);
 
-int jp2_simple_command(struct jp2_remote *r, uint8_t cmd);
-int jp2_command(struct jp2_remote *r, uint8_t *txdata, int txlen,
+int jp2_simple_command(struct jp2_remote *r, const uint8_t cmd);
+int jp2_command(struct jp2_remote *r, const uint8_t *txdata, int txlen,
 	uint8_t **rxdata);
 
 /* specific commands */
@@ -75,7 +76,7 @@ int jp2_write_block(struct jp2_remote *r, uint32_t address, uint16_t len,
 		uint8_t *data);
 int jp2_checksum_block(struct jp2_remote *r, uint32_t start, uint32_t end);
 int jp2_get_info(struct jp2_remote *r, struct jp2_info *info);
-int jp2_enter_loader(struct jp2_remote *r);
+int jp2_enter_loader(struct jp2_remote *r, bool extended_mode);
 int jp2_exit_loader(struct jp2_remote *r);
 
 #endif /* __JP2LIBRARY_H */

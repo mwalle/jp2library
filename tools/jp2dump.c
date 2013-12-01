@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <stdbool.h>
 #include <assert.h>
 
 #include "jp2library.h"
@@ -73,7 +74,7 @@ int main(int argc, char **argv)
 		return 3;
 	}
 
-	jp2_enter_loader(r);
+	jp2_enter_loader(r, true);
 
 	data = malloc(length);
 	assert(data);
@@ -83,7 +84,7 @@ int main(int argc, char **argv)
 		fwrite(data, 1, length, f);
 		goto out;
 	}
-	
+
 	/* didn't work out, try using checksum method */
 	printf("\nRead command returned error code. Trying alternative method.\n");
 	for (addr = start; addr < start + length; addr++) {

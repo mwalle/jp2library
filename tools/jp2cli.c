@@ -191,7 +191,7 @@ int main(int argc, char **argv)
 	jp2_init();
 	r = jp2_open_remote(dev);
 
-	jp2_enter_loader(r);
+	jp2_enter_loader(r, true);
 
 	jp2_get_info(r, &info);
 
