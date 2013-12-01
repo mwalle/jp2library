@@ -179,7 +179,7 @@ JP12FUNC_4(readRemote, jint, jobject obj, jint address, jbyteArray jbuffer,
 }
 
 JP12FUNC_4(writeRemote, jint, jobject obj, jint address, jbyteArray jbuffer,
-		jint length)
+		jint _unused)
 {
 	int rc;
 	jbyte *buf;
@@ -188,6 +188,18 @@ JP12FUNC_4(writeRemote, jint, jobject obj, jint address, jbyteArray jbuffer,
 	jp2_initialize();
 
 	len = (*env)->GetArrayLength(env, jbuffer);
+
+	/* prevent user from accidentally brick his remote */
+	if ((address < info.update_area_begin)
+			|| ((address + len - 1) > info.update_area_end)) {
+		return -1;
+	}
+
+	rc = jp2_erase_block(r, address, address + len);
+	if (rc != JP2_ERR_NO_ERR) {
+		return -1;
+	}
+
 	buf = malloc(len * sizeof(jbyte));
 
 	/* XXX: convert to exception */
