@@ -128,6 +128,7 @@ JP12FUNC_2(openRemote, jstring, jobject obj, jstring jportname)
 JP12FUNC_1(closeRemote, void, jobject obj)
 {
 	jp2_initialize();
+	jp2_exit_loader(r);
 	jp2_close_remote(r);
 }
 
