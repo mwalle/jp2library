@@ -129,8 +129,7 @@ static uint8_t jp2_checksum(uint8_t *data, int len)
 	return csum;
 }
 
-/* RTS# is connected to the RESET# input of the remote, pulsing this pin
- * for 35ms will put the remote into programming mode */
+/* RTS# is connected to the RESET# input of the remote */
 static void jp2_reset(struct jp2_remote *r)
 {
 	int rc;
@@ -140,7 +139,7 @@ static void jp2_reset(struct jp2_remote *r)
 	rc = osapi->reset(r->handle, true);
 	assert(!rc);
 
-	usleep(135000);
+	usleep(10000);
 
 	rc = osapi->reset(r->handle, false);
 	assert(!rc);
@@ -471,7 +470,7 @@ int jp2_enter_loader(struct jp2_remote *r)
 	jp2_reset(r);
 
 	/* we need to wait until the processor starts up */
-	usleep(150000);
+	usleep(200000);
 
 	/* flush any spurious characters in the input buffer */
 	osapi->flush(r->handle);
