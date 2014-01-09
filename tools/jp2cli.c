@@ -267,7 +267,11 @@ int main(int argc, char **argv)
 	r = jp2_open_remote(dev);
 
 	if (!o_noenter) {
-		jp2_enter_loader(r, true);
+		rc = jp2_enter_loader(r, true);
+		if (rc) {
+			fprintf(stderr, "Could not enter bootloader mode\n");
+			exit(1);
+		}
 	}
 
 	jp2_get_info(r, &info);
