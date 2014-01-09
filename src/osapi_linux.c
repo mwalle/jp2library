@@ -32,9 +32,16 @@
 
 #include "osapi.h"
 
+typedef enum {
+	STATE_BLOCKING,
+	STATE_NON_BLOCKING,
+} state_t;
+
 struct osapi_linux_data {
 	int fd;
 	struct termios oldtio;
+	int flags;
+	state_t state;
 };
 
 /* non-reentrant! */
@@ -106,6 +113,14 @@ static void *_open_remote(const char *devname, int flags)
 		return NULL;
 	}
 
+	d->state = STATE_BLOCKING;
+	d->flags = fcntl(d->fd, F_GETFL, 0);
+	if (d->flags < 0) {
+		perror("fcntl()");
+		free(d);
+		return NULL;
+	}
+
 	return d;
 }
 
@@ -156,6 +171,38 @@ static ssize_t _read_remote(void *handle, void *buf, size_t count)
 	struct osapi_linux_data *d = handle;
 	size_t bytes_read = 0;
 
+	if (d->state == STATE_NON_BLOCKING) {
+		rc = fcntl(d->fd, F_SETFL, d->flags);
+		if (rc < 0) {
+			return rc;
+		}
+		d->state = STATE_BLOCKING;
+	}
+
+	while (bytes_read < count) {
+		rc = read(d->fd, buf + bytes_read, count - bytes_read);
+		if (rc < 0) {
+			return rc;
+		}
+		bytes_read += rc;
+	}
+	return bytes_read;
+}
+
+static ssize_t _read_nonblock_remote(void *handle, void *buf, size_t count)
+{
+	int rc;
+	struct osapi_linux_data *d = handle;
+	size_t bytes_read = 0;
+
+	if (d->state == STATE_BLOCKING) {
+		rc = fcntl(d->fd, F_SETFL, d->flags | O_NONBLOCK);
+		if (rc < 0) {
+			return rc;
+		}
+		d->state = STATE_NON_BLOCKING;
+	}
+
 	while (bytes_read < count) {
 		rc = read(d->fd, buf + bytes_read, count - bytes_read);
 		if (rc < 0) {
@@ -168,7 +215,17 @@ static ssize_t _read_remote(void *handle, void *buf, size_t count)
 
 static ssize_t _write_remote(void *handle, void *buf, size_t count)
 {
+	int rc;
 	struct osapi_linux_data *d = handle;
+
+	if (d->state == STATE_NON_BLOCKING) {
+		rc = fcntl(d->fd, F_SETFL, d->flags);
+		if (rc < 0) {
+			return rc;
+		}
+		d->state = STATE_BLOCKING;
+	}
+
 	return write(d->fd, buf, count);
 }
 
@@ -179,6 +236,7 @@ static struct osapi_ops linux_ops = {
 	.flush = _flush_remote,
 	.reset = _reset_remote,
 	.read = _read_remote,
+	.read_nonblock = _read_nonblock_remote,
 	.write = _write_remote,
 };
 

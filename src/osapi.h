@@ -29,6 +29,7 @@ struct osapi_ops {
 	int (*reset)(void *handle, bool assert_pin);
 	int (*flush)(void *handle);
 	ssize_t (*read)(void *handle, void *buf, size_t count);
+	ssize_t (*read_nonblock)(void *handle, void *buf, size_t count);
 	ssize_t (*write)(void *handle, void *buf, size_t count);
 };
 

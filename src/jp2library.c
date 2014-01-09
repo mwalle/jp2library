@@ -139,7 +139,7 @@ static void jp2_reset(struct jp2_remote *r)
 	rc = osapi->reset(r->handle, true);
 	assert(!rc);
 
-	usleep(10000);
+	usleep(100000);
 
 	rc = osapi->reset(r->handle, false);
 	assert(!rc);
@@ -465,8 +465,43 @@ int jp2_get_info(struct jp2_remote *r, struct jp2_info *info)
 	return 0;
 }
 
+/*
+ * Send a zero byte every 10ms. After some time the remote should respond
+ * by sending an invalid command reply.
+ */
+static int jp2_poll(struct jp2_remote *r)
+{
+	int rc;
+	int i;
+	uint8_t buf;
+
+	debug(1, "%s: start polling\n", __func__);
+
+	/* poll for max 1 second */
+	for (i = 0; i < 100; i++) {
+		osapi->flush(r->handle);
+		buf = 0;
+		rc = osapi->write(r->handle, &buf, 1);
+		if (rc != 1) {
+			return -1;
+		}
+		usleep(5000);
+		rc = osapi->read_nonblock(r->handle, &buf, 1);
+		if (rc > 0) {
+			debug(1, "%s: polling succeeded\n", __func__);
+			return 0;
+		}
+		usleep(5000);
+	}
+
+	debug(1, "%s: polling failed\n", __func__);
+	return -1;
+}
+
 int jp2_enter_loader(struct jp2_remote *r, bool extended_mode)
 {
+	int rc;
+
 	/* this is some kind of key, which you can find if you
 	 * disassemble the bootloader of your remote */
 	static const uint8_t cmd[] = {
@@ -475,13 +510,17 @@ int jp2_enter_loader(struct jp2_remote *r, bool extended_mode)
 
 	jp2_reset(r);
 
-	/* we need to wait until the processor starts up */
-	usleep(200000);
+	/* poll until the processor has started */
+	rc = jp2_poll(r);
+	if (rc) {
+		return rc;
+	}
 
 	/* flush any spurious characters in the input buffer */
 	osapi->flush(r->handle);
 
-	return jp2_command(r, cmd, (extended_mode) ? 3 : 1, NULL);
+	rc = jp2_command(r, cmd, (extended_mode) ? 3 : 1, NULL);
+	return (rc < 0) ? -1 : 0;
 }
 
 int jp2_exit_loader(struct jp2_remote *r)
